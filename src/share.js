@@ -1,0 +1,1 @@
+export const main = async (ns) => { while (true) await ns.share(); }
