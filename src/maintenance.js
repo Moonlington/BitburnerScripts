@@ -1,59 +1,33 @@
-/** @param {import("../.").NS} ns */
+import { getServers, getRootAccess, copyScripts } from "./lib/utils";
+
+var ram = 32;
+var bb = true;
+const darkwebPrograms = [
+    "BruteSSH.exe",
+    "FTPCrack.exe",
+    "relaySMTP.exe",
+    "HTTPWorm.exe",
+    "SQLInject.exe",
+    "ServerProfiler.exe",
+    "DeepscanV1.exe",
+    "DeepscanV2.exe",
+    "AutoLink.exe",
+    "Formulas.exe",
+];
+
+/** @param {import("..").NS} ns */
 export async function main(ns) {
-    ns.disableLog("ALL");
-    ns.tail();
-    
-    var ram = 32;
-    const hostnamePrefix = "pserv-";
-    let serverLimit = ns.getPurchasedServerLimit();
-    let serverMaxRam = ns.getPurchasedServerMaxRam();
-
     while (true) {
-        if (ram >= serverMaxRam) break;
-        var serverNumber = 0;
-        while (serverNumber < serverLimit) {
-            ns.clearLog();
-            var serverName = hostnamePrefix + serverNumber;
-            if (!ns.serverExists(serverName)) {
-                if (ns.getServerMoneyAvailable("home") >= ns.getPurchasedServerCost(ram)) {
-                    ns.purchaseServer(serverName, ram);
-                    ns.tprint(`Purchased server "${serverName}" with ${ns.formatRam(ram)}`);
-                    serverNumber++;
-                    continue;
-                }
-
-                ns.print(
-                    `Unable to purchase server "${serverName}" require: $${ns.formatNumber(
-                        ns.getPurchasedServerCost(ram)
-                    )}`
-                );
-                await ns.sleep(1000);
-                continue;
-            }
-
-            if (ns.getServerMoneyAvailable("home") >= ns.getPurchasedServerUpgradeCost(serverName, ram)) {
-                if (ns.getServerMaxRam(serverName) < ram) {
-                    if (ns.ps(serverName).length !== 0) {
-                        ns.print(
-                            `Unable to upgrade server "${serverName}" to ${ns.formatRam(ram)}, scripts running on the server`
-                        );
-                        await ns.sleep(0)
-                        continue;
-                    }
-                    ns.upgradePurchasedServer(serverName, ram);
-                    ns.tprint(`Upgraded ram on server "${serverName}" to ${ns.formatRam(ram)}`);
-                }
-                serverNumber++;
-                continue;
-            }
-
-            ns.print(
-                `Unable to upgrade server "${serverName}" require: $${ns.formatNumber(
-                    ns.getPurchasedServerUpgradeCost(serverName, ram)
-                )}`
-            );
-            await ns.sleep(1000);
+        if (!ns.hasTorRouter()) ns.singularity.purchaseTor();
+        ns.singularity.upgradeHomeRam()
+        const unownedPrograms = darkwebPrograms.filter((p) => !ns.fileExists(p, "home"));
+        for (const program of unownedPrograms) {
+            ns.singularity.purchaseProgram(program);
         }
-        ram = 2 * ram
+        ns.singularity.upgradeHomeCores()
+        for (const faction of ns.singularity.checkFactionInvitations()) {
+            ns.singularity.joinFaction(faction)
+        }
+        await ns.asleep(0);
     }
 }

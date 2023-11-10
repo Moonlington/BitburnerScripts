@@ -1,4 +1,4 @@
-import { optimizeCorpoMaterials_raw } from "./lib/utils";
+import { optimizeCorpoMaterials_raw } from "./lib/corpo";
 
 const CORPORATION_NAME = "FloreCorp"; // change if you like
 const AGRI_NAME = "AgriCorp";

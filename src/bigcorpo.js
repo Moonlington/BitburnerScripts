@@ -7,42 +7,48 @@ const binarySearchData = {};
 
 /** @param {import("..").NS} ns */
 export async function main(ns) {
+    const c = ns.corporation
+
     ns.disableLog("ALL");
-    ns.tail();
 
     const cities = Object.values(ns.enums.CityName);
 
-    if (!ns.corporation.hasCorporation()) {
-        ns.print("This script is a maintenance and growing script for corporations, and requires a corporation.");
+    if (!c.hasCorporation()) {
+        ns.tprint("ERROR: Not in a Corporation!");
+        ns.exit();
+    }
+
+    if (!c.getCorporation().divisions.map((d)=>c.getDivision(d)).filter((d)=>d.type==="Tobacco").length < 1) {
+        ns.tprint("ERROR: No Tabacco industry, assuming not ready!");
         ns.exit();
     }
 
     const timer = setInterval(() => {
         ns.clearLog();
-        ns.print(`Current state: ${ns.corporation.getCorporation().state}`);
+        ns.print(`Current state: ${c.getCorporation().state}`);
     }, 100);
     ns.atExit(() => {
         clearInterval(timer);
     });
 
     while (true) {
-        while (ns.corporation.getCorporation().state === "PURCHASE") {
+        while (c.getCorporation().state === "PURCHASE") {
             await ns.asleep(0);
         }
-        while (ns.corporation.getCorporation().state !== "PURCHASE") {
+        while (c.getCorporation().state !== "PURCHASE") {
             // MULTIPLE TIMES A CYCLE
-            for (const division of ns.corporation.getCorporation().divisions) {
-                if (ns.corporation.getDivision(division).makesProducts) {
+            for (const division of c.getCorporation().divisions) {
+                if (c.getDivision(division).makesProducts) {
                     handleProducts(ns, division, binarySearchData);
                     while (
-                        ns.corporation.getHireAdVertCost(division) <=
-                        ns.corporation.getCorporation().funds * useMoneyProportion
+                        c.getHireAdVertCost(division) <=
+                        c.getCorporation().funds * useMoneyProportion
                     ) {
-                        ns.corporation.hireAdVert(division);
+                        c.hireAdVert(division);
                     }
                 }
                 doResearch(ns, division);
-                for (const city of ns.corporation.getDivision(division).cities) {
+                for (const city of c.getDivision(division).cities) {
                     upgradeWarehouse(ns, division, city);
                     handleHiring(ns, division, city);
                     handleMaterials(ns, division, city);
@@ -52,19 +58,19 @@ export async function main(ns) {
             await ns.asleep(0);
         }
         // ONCE A CYCLE
-        for (const division of ns.corporation.getCorporation().divisions) {
+        for (const division of c.getCorporation().divisions) {
             for (const city of cities) {
-                if (!ns.corporation.getDivision(division).cities.includes(city))
-                    ns.corporation.expandCity(division, city);
-                if (!ns.corporation.hasWarehouse(division, city)) ns.corporation.purchaseWarehouse(division, city);
-                ns.corporation.setSmartSupply(division, city, true);
+                if (!c.getDivision(division).cities.includes(city))
+                    c.expandCity(division, city);
+                if (!c.hasWarehouse(division, city)) c.purchaseWarehouse(division, city);
+                c.setSmartSupply(division, city, true);
             }
-            for (const city of ns.corporation.getDivision(division).cities) {
+            for (const city of c.getDivision(division).cities) {
                 maximizeHappiness(ns, division, city);
                 optimizeMaterials(ns, division, city);
             }
         }
-        if (ns.corporation.hasUnlock("Export")) doExports(ns);
+        if (c.hasUnlock("Export")) doExports(ns);
 
         for (const divdata of Object.values(binarySearchData)) {
             for (const citydata of Object.values(divdata)) {
@@ -74,7 +80,7 @@ export async function main(ns) {
             }
         }
         // ns.tprint(binarySearchData)
-        for (const faction of ns.getPlayer().factions) ns.corporation.bribe(faction, Math.max(ns.corporation.getCorporation().funds*0.01, 0))
+        for (const faction of ns.getPlayer().factions) c.bribe(faction, Math.max(c.getCorporation().funds*0.01, 0))
         await ns.asleep(0);
     }
 }

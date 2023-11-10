@@ -10,7 +10,7 @@ const OVERESTIMATE_G = 1.01
 /** @param {import("../.").NS} ns */
 export async function main(ns) {
     ns.disableLog("ALL");
-    ns.tail();
+    // ns.tail();
 
     const triedServers = []
     while (true) {
@@ -23,7 +23,7 @@ export async function main(ns) {
             getRootAccess(ns, server);
             if (!triedServers.includes(server)) target = checkTarget(ns, server, target, ns.fileExists("Formulas.exe", "home"));
             copyScripts(ns, server, WORKERS, true);
-            return ns.hasRootAccess(server);
+            return ns.hasRootAccess(server) && !server.startsWith("hacknet-server-");
         });
         
         const ramNet = new RamNet(ns, servers);

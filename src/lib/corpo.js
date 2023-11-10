@@ -1,6 +1,11 @@
 const boosterMaterialProportion = 0.7;
 const useMoneyProportion = 1;
-const productNames = { Tobacco: "DeathSticks", Restaurant: "Pizza", "Computer Hardware": "Puter", "Real Estate": "House" };
+const productNames = {
+    Tobacco: "DeathSticks",
+    Restaurant: "Pizza",
+    "Computer Hardware": "Puter",
+    "Real Estate": "House",
+};
 
 export function optimizeCorpoMaterials_raw(weights, factors, spaceConstraint, round = true) {
     let p = factors.reduce((a, b) => a + b, 0);
@@ -26,23 +31,33 @@ export function optimizeCorpoMaterials_raw(weights, factors, spaceConstraint, ro
     return r;
 }
 
-
-/** @param {import("..").NS} ns */
+/** @param {import("../..").NS} ns */
 export function getUpgrades(ns) {
     const upgrades = ns.corporation.getConstants().upgradeNames.filter((u) => u !== "DreamSense");
     for (const upgrade of upgrades) {
-        getUpgradeThreshold(ns, upgrade, useMoneyProportion);
+        getUpgradeThreshold(ns, upgrade);
     }
 }
 
-/** @param {import("..").NS} ns */
-export function getUpgradeThreshold(ns, upgradeName, threshold) {
-    if (ns.corporation.getUpgradeLevelCost(upgradeName) <= ns.corporation.getCorporation().funds * useMoneyProportion) {
+/** @param {import("../..").NS} ns */
+export function getUpgradeThreshold(ns, upgradeName) {
+    if (
+        upgradeName == "Wilson Analytics" &&
+        ns.corporation.getUpgradeLevelCost(upgradeName) <= ns.corporation.getCorporation().funds
+    ) {
+        ns.corporation.levelUpgrade(upgradeName);
+        return;
+    }
+    if (
+        ns.corporation.getUpgradeLevelCost(upgradeName) <=
+            ns.corporation.getCorporation().revenue * useMoneyProportion &&
+        ns.corporation.getCorporation().revenue <= ns.corporation.getCorporation().funds * useMoneyProportion
+    ) {
         ns.corporation.levelUpgrade(upgradeName);
     }
 }
 
-/** @param {import("..").NS} ns */
+/** @param {import("../..").NS} ns */
 export function upgradeWarehouse(ns, division, city) {
     if (
         ns.corporation.getUpgradeWarehouseCost(division, city, 10) <=
@@ -52,7 +67,7 @@ export function upgradeWarehouse(ns, division, city) {
     }
 }
 
-/** @param {import("..").NS} ns */
+/** @param {import("../..").NS} ns */
 export function doExports(ns) {
     const exportString = "(IPROD+IINV/10)*(-1)";
     const consumers = {};
@@ -90,7 +105,7 @@ export function doExports(ns) {
     }
 }
 
-/** @param {import("..").NS} ns */
+/** @param {import("../..").NS} ns */
 export function handleMaterials(ns, division, city) {
     const producedMaterials = ns.corporation.getIndustryData(
         ns.corporation.getDivision(division).type
@@ -107,7 +122,7 @@ export function handleMaterials(ns, division, city) {
     }
 }
 
-/** @param {import("..").NS} ns */
+/** @param {import("../..").NS} ns */
 export function doResearch(ns, division) {
     if (!ns.corporation.hasResearched(division, "Hi-Tech R&D Laboratory")) {
         if (
@@ -144,7 +159,7 @@ export function doResearch(ns, division) {
     }
 }
 
-/** @param {import("..").NS} ns */
+/** @param {import("../..").NS} ns */
 export function handleProducts(ns, division, binarySearchData) {
     if (!ns.corporation.getDivision(division).cities.includes("Aevum")) return;
     var div = ns.corporation.getDivision(division);
@@ -208,7 +223,7 @@ export function handleProducts(ns, division, binarySearchData) {
     }
 }
 
-/** @param {import("..").NS} ns */
+/** @param {import("../..").NS} ns */
 export function handleHiring(ns, division, city) {
     if (
         ns.corporation.getOfficeSizeUpgradeCost(division, city, 15) <=
@@ -220,28 +235,37 @@ export function handleHiring(ns, division, city) {
 
     const size = ns.corporation.getOffice(division, city).size;
 
-    assignJobs(ns, division, city, [0,0,0,0,0])
+    assignJobs(ns, division, city, [0, 0, 0, 0, 0]);
 
     if (ns.corporation.getDivision(division).makesProducts) {
         if (city !== "Aevum") {
             // Research Cities
-            const rest = Math.max(1, Math.floor(size * 0.01))
-            assignJobs(ns, division, city, [rest,rest,rest,rest,size-(rest*4)])
+            const rest = Math.max(1, Math.floor(size * 0.01));
+            assignJobs(ns, division, city, [rest, rest, rest, rest, size - rest * 4]);
         } else {
             // Design Cities
-            const [ops, eng, bus] = [Math.max(1, Math.floor(size * 0.06)), Math.max(1, Math.floor(size * 0.3)), Math.max(1, Math.floor(size * 0.08))]
-            assignJobs(ns, division, city, [ops, eng, bus, size-ops-eng-bus, 0])
+            const [ops, eng, bus] = [
+                Math.max(1, Math.floor(size * 0.06)),
+                Math.max(1, Math.floor(size * 0.3)),
+                Math.max(1, Math.floor(size * 0.08)),
+            ];
+            assignJobs(ns, division, city, [ops, eng, bus, size - ops - eng - bus, 0]);
         }
     } else {
         // Rest Cities
-        const [ops, eng, bus, man] = [Math.max(1, Math.floor(size * 0.06)), Math.max(1, Math.floor(size * 0.3)), Math.max(1, Math.floor(size * 0.08)), Math.floor(size * 0.3)]
-        assignJobs(ns, division, city, [ops, eng, bus, man,size-ops-eng-bus-man])
+        const [ops, eng, bus, man] = [
+            Math.max(1, Math.floor(size * 0.06)),
+            Math.max(1, Math.floor(size * 0.3)),
+            Math.max(1, Math.floor(size * 0.08)),
+            Math.floor(size * 0.3),
+        ];
+        assignJobs(ns, division, city, [ops, eng, bus, man, size - ops - eng - bus - man]);
     }
 }
 
-/** @param {import("..").NS} ns */
+/** @param {import("../..").NS} ns */
 export function assignJobs(ns, division, city, amounts) {
-    const [ops, eng, bus, man, rnd] = amounts
+    const [ops, eng, bus, man, rnd] = amounts;
     ns.corporation.setAutoJobAssignment(division, city, "Operations", ops);
     ns.corporation.setAutoJobAssignment(division, city, "Engineer", eng);
     ns.corporation.setAutoJobAssignment(division, city, "Business", bus);
@@ -250,14 +274,14 @@ export function assignJobs(ns, division, city, amounts) {
     ns.corporation.setAutoJobAssignment(division, city, "Intern", 0);
 }
 
-/** @param {import("..").NS} ns */
+/** @param {import("../..").NS} ns */
 export function maximizeHappiness(ns, division, city) {
     const { avgEnergy, avgMorale } = ns.corporation.getOffice(division, city);
     if (avgEnergy < 99) ns.corporation.buyTea(division, city);
     if (avgMorale < 99.5) ns.corporation.throwParty(division, city, avgMorale > 99 ? 1e5 : 1e6);
 }
 
-/** @param {import("..").NS} ns */
+/** @param {import("../..").NS} ns */
 export function optimizeMaterials(ns, division, city) {
     const hmd = ns.corporation.getMaterialData("Hardware");
     const amd = ns.corporation.getMaterialData("AI Cores");
@@ -266,7 +290,12 @@ export function optimizeMaterials(ns, division, city) {
     const weights = [hmd.size, amd.size, remd.size, rmd.size];
 
     const industry = ns.corporation.getIndustryData(ns.corporation.getDivision(division).type);
-    const factors = [industry.hardwareFactor, industry.aiCoreFactor, industry.realEstateFactor, industry.robotFactor].map((s)=>s === undefined ? 0 : s);
+    const factors = [
+        industry.hardwareFactor,
+        industry.aiCoreFactor,
+        industry.realEstateFactor,
+        industry.robotFactor,
+    ].map((s) => (s === undefined ? 0 : s));
 
     const warehouse = ns.corporation.getWarehouse(division, city);
 
@@ -286,7 +315,7 @@ export function optimizeMaterials(ns, division, city) {
     }
 }
 
-/** @param {import("..").NS} ns */
+/** @param {import("../..").NS} ns */
 export function binarySearchPriceProduct(ns, division, city, product, binarySearchData) {
     if (!(division in binarySearchData)) {
         binarySearchData[division] = {};
